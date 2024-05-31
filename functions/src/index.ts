@@ -30,7 +30,7 @@ export const onUserCreate = region("asia-south1")
       email,
       picture: photoURL,
       name: displayName,
-      creationTime,
+      createdAt: creationTime,
       status: "active",
     });
   });
