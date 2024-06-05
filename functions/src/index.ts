@@ -1,14 +1,19 @@
 // Admin Imports.
 import admin from "firebase-admin";
 import { getFirestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 
 // Functions Imports.
 import { region } from "firebase-functions/v1";
-import { onDocumentCreatedWithAuthContext } from "firebase-functions/v2/firestore";
+import {
+  onDocumentCreatedWithAuthContext,
+  onDocumentDeleted,
+} from "firebase-functions/v2/firestore";
 
 // Confifurations.
 admin.initializeApp();
 const firestore = getFirestore();
+const storage = getStorage().bucket();
 
 //        AUTH FUNCTIONS.
 
@@ -75,5 +80,28 @@ export const onProjectCreate = onDocumentCreatedWithAuthContext(
       },
       { merge: true }
     );
+  }
+);
+
+/*
+  This function is triggered everytime a project is deleted.
+  It deletes all subcollections & images related to this project.
+*/
+export const onProjectDelete = onDocumentDeleted(
+  {
+    document: "projects/{docId}",
+    region: "asia-south1",
+  },
+  async function (event) {
+    const project = event.data?.data();
+    const pattern =
+      /https:\/\/firebasestorage\.googleapis\.com\/v0\/b\/[^\/]+\/o\/([^?]+)/;
+
+    const deleteProps = project?.images?.map((url: string) => {
+      const match = url.match(pattern);
+      storage.file(match ? decodeURIComponent(match[1]) : url).delete();
+    });
+
+    return Promise.all(deleteProps);
   }
 );
