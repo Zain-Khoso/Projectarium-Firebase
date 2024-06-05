@@ -16,6 +16,7 @@ service cloud.firestore {
     match /projects/{docId} {
       allow read;
       allow create: if request.auth != null;
+      allow delete, update: if request.auth.uid == resource.data.creator.uid
     }
   }
 }
