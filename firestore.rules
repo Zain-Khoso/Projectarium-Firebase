@@ -13,10 +13,16 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    match /projects/{docId} {
+    match /projects/{projectId} {
       allow read;
       allow create: if request.auth != null;
       allow delete, update: if request.auth.uid == resource.data.creator.uid
+
+      match /contributors/{userId} {
+        allow read;
+        allow update: if false;
+        allow create, delete: if request.auth.uid == get(/databases/$(database)/documents/projects/$(projectId)).data.creator.uid;
+      }
     }
   }
 }
