@@ -7,6 +7,7 @@ import { getStorage } from "firebase-admin/storage";
 import { region } from "firebase-functions/v1";
 import {
   onDocumentCreatedWithAuthContext,
+  onDocumentCreated,
   onDocumentDeleted,
 } from "firebase-functions/v2/firestore";
 
@@ -103,5 +104,55 @@ export const onProjectDelete = onDocumentDeleted(
     });
 
     return Promise.all(deleteProps);
+  }
+);
+
+/*
+  This function is triggered everytime a new project contributor is created.
+  It stores the contributor's data & contribution status inside of project contribution document.
+  And also creates a new notification document inside the contributor's notification subcollection.
+*/
+export const onProjectContributorCreate = onDocumentCreated(
+  {
+    document: "projects/{projectId}/contributors/{userId}",
+    region: "asia-south1",
+  },
+  async function (event) {
+    const {
+      params: { projectId, userId },
+      data,
+    } = event;
+
+    // Requesting user data.
+    const userSnapshot = await firestore.doc(`users/${userId}`).get();
+    const user = userSnapshot.data();
+
+    // Requesting project data.
+    const projectSnapshot = await firestore.doc(`projects/${projectId}`).get();
+    const project = projectSnapshot.data();
+
+    // Creating contribution document in user's contributions subcollection.
+    await firestore.doc(`users/${userId}/contributions/${projectId}`).set({
+      projectName: project?.title,
+      creatorName: project?.creator?.name,
+      status: "Initialized",
+      description: data?.data().description,
+    });
+
+    // Creating notification document in user's notifications subcollection.
+    await firestore.collection(`users/${userId}/notifications`).add({
+      title: "Contribution Request.",
+      url: "users/requests",
+      status: "unread",
+    });
+
+    return data?.ref.set({
+      email: user?.email,
+      name: user?.name,
+      picture: user?.picture,
+      createdAt: data.createTime,
+      status: "Initialized",
+      description: data.data().description,
+    });
   }
 );

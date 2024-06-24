@@ -6,6 +6,16 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if request.auth != null;
       allow write: if false;
+
+      match /contributions/{projectId} {
+        allow create: if false;
+        allow read, update, delete: if request.auth.uid == userId;
+      }
+
+      match /notifications/{notificationId} {
+        allow create: if false;
+        allow read, update, delete: if request.auth.uid == userId;
+      }
     }
 
     match /StaticContent/{docId} {
