@@ -156,3 +156,36 @@ export const onProjectContributorCreate = onDocumentCreated(
     });
   }
 );
+
+/*
+  This function is triggered everytime a contribution is delete from a project.
+  It deletes the contribution data from the user's ( contributor's ) document as well.
+  And also creates a new notification document inside the contributor's notification subcollection.
+*/
+export const onProjectContributorDelete = onDocumentDeleted(
+  {
+    document: "projects/{projectId}/contributors/{userId}",
+    region: "asia-south1",
+  },
+  async function (event) {
+    const {
+      params: { projectId, userId },
+    } = event;
+
+    // Deleting the contribution document from user's contributions subcollection.
+    const prom1 = await firestore
+      .doc(`users/${userId}/contributions/${projectId}`)
+      .delete();
+
+    // Creating notification document in user's notifications subcollection.
+    const prom2 = await firestore
+      .collection(`users/${userId}/notifications`)
+      .add({
+        title: "Contribution Deleted.",
+        url: null,
+        status: "unread",
+      });
+
+    return Promise.all([prom1, prom2]);
+  }
+);
